@@ -12,6 +12,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface PreferenceField {
 
+  String defaultValue() default "";
+
 //  String returnType() default "String";
 //  String returnPreferenceName() default "";
 }

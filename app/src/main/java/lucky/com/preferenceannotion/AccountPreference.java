@@ -14,6 +14,12 @@ public class AccountPreference {
   @PreferenceField
   public String account;
 
-  @PreferenceField
+  @PreferenceField( defaultValue = "true")
   public boolean ok;
+
+  @PreferenceField( defaultValue = "10")
+  public int kitty;
+
+  @PreferenceField (defaultValue = "123")
+  public double merlin;
 }

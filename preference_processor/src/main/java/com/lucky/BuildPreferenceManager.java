@@ -65,11 +65,9 @@ public class BuildPreferenceManager {
 
 
   public void generateFile(String sourceClassName) throws IllegalStateException,IOException{
-
     this.sourceClassname= sourceClassName;
     destClassName = sourceClassName;
     messager.printMessage(Diagnostic.Kind.NOTE, "=======" + pkgName +" , "+ sourceClassName);
-
     JavaFileObject managerFile = filer.createSourceFile(destClassName);
     javaWriter = new JavaWriter(managerFile.openWriter());
     javaWriter.emitPackage(pkgName)
@@ -92,20 +90,33 @@ public class BuildPreferenceManager {
     return pkgName;
   }
 
+  /**
+   * generate class property {class a = null}
+   *
+   * * */
   public void generatePropertyClass(String pkgName,String className) throws IOException{
+    if (pkgName == null || className == null) {
+      return;
+    }
     preferenceList.add(className);
     String classType = pkgName+ "." + className;
     String valueName = getValueName(className);
     messager.printMessage(Diagnostic.Kind.OTHER," <<<<<<<<<< class type >>>>>>>>>>" + classType);
     generateConst(EnumSet.of(Modifier.PRIVATE,Modifier.STATIC),classType,
-        valueName,"new " + className +"()");
+        valueName,"null");
     generateStaticMethod(className);
   }
 
+//generate static get Preference method
   public void generateStaticMethod(String className) throws IOException{
 //    javaWriter.emitImports(type);
     javaWriter.beginMethod(className,getStaticMethodName(className),EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
     String valueName = getValueName(className);
+    javaWriter.beginControlFlow("if( %s == null )",valueName);
+    javaWriter.beginControlFlow("synchronized (%s.class)",className);
+    javaWriter.emitStatement("%s = new %s()",valueName,className);
+    javaWriter.endControlFlow();
+    javaWriter.endControlFlow();
     javaWriter.emitStatement("return %s",valueName);
     javaWriter.endMethod()
         .emitEmptyLine();
@@ -116,8 +127,8 @@ public class BuildPreferenceManager {
       return;
     }
     javaWriter.beginMethod("void", "clear", EnumSet.of(Modifier.PUBLIC,Modifier.STATIC),CONTEXT,CTX);
-    for (String prefernce : preferenceList) {
-      String propertyName = getValueName(prefernce);
+    for (String preference : preferenceList) {
+      String propertyName = getValueName(preference);
       javaWriter.beginControlFlow("if (%s != null)",propertyName);
       javaWriter.emitStatement("%s.clear(%s)",propertyName,CTX);
       String str = String.format("%s.clear(%s)",propertyName,CTX);
@@ -125,13 +136,7 @@ public class BuildPreferenceManager {
       javaWriter.endControlFlow();
     }
     javaWriter.endMethod();
-
   }
-
-
-
-
-
 
   public void generateConst(EnumSet modifier, String type, String name,String value) throws IOException{
     javaWriter.emitField(type, name, modifier, value);
@@ -170,9 +175,6 @@ public class BuildPreferenceManager {
     }
     return String.valueOf(ch);
   }
-
-
-
 
 
   public void endFile() throws IOException{

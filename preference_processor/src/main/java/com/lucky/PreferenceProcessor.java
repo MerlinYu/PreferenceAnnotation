@@ -69,6 +69,7 @@ public class PreferenceProcessor extends AbstractProcessor {
     Set<? extends Element> preferenceFields = roundEnv.getElementsAnnotatedWith(PreferenceField.class);
     Map<Element, List<Element>> preferenceObjects = new HashMap<>(20);
     int i = 0;
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor start to work！>>>>>>>>>>>>");
     // class element为key将对应的field形成list put 到 map中
     for (final Element field : preferenceFields) {
       messager.printMessage(Diagnostic.Kind.NOTE, "element " + i++ + " field " + field.getSimpleName());
@@ -108,20 +109,11 @@ public class PreferenceProcessor extends AbstractProcessor {
        preferenceManager.setPackageName(uniquePkgName);
      }
      preferenceManager.generateFile();
-     int k = 0;
      for (final Map.Entry<Element, List<Element>> entry: preferenceObjects.entrySet()) {
        Element classObject = entry.getKey();
        List<Element> fieldProperty = entry.getValue();
-       PreferenceItem item = classObject.getAnnotation(PreferenceItem.class);
-       String table = item.tableName();
-       String sourceClassName = typeUtils.asElement(classObject.asType()).getSimpleName().toString();
-       // auto generate PreferenceItem class
        BuildPreferenceClass itemClass = new BuildPreferenceClass(filer, typeUtils, elementUtils, messager);
-       messager.printMessage(Diagnostic.Kind.OTHER, "sourceClassName, " + sourceClassName);
-       itemClass.generateFile(sourceClassName, classObject);
-       itemClass.generateConst(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC),
-           "String", table );
-       itemClass.generateCode(fieldProperty);
+       itemClass.generateFile(classObject,fieldProperty);
        itemClass.endFile();
        preferenceManager.generatePropertyClass(itemClass.getPackageName(),itemClass.getDestClassName());
      }
@@ -134,6 +126,8 @@ public class PreferenceProcessor extends AbstractProcessor {
     } catch (NullPointerException e) {
       messager.printMessage(Diagnostic.Kind.ERROR, "NullPointerException " + e.getMessage());
    }
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor finished！>>>>>>>>>>>>");
+
     return false;
   }
 
@@ -146,7 +140,7 @@ public class PreferenceProcessor extends AbstractProcessor {
 
     Map<String,Integer> pkgMap = new HashMap<>();
 
-    // 统计pkgName的次数
+    // account pkgName appear
     for (Element element : elementMap.keySet()) {
       String pkgName = elementUtils.getPackageOf(element).getQualifiedName().toString();
       Integer integer = pkgMap.get(pkgName);

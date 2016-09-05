@@ -14,6 +14,7 @@ import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 /**
@@ -90,7 +91,13 @@ public class BuildPreferenceClass {
 
 
 
-  public void generateFile(String sourceClassName, Element element) throws IllegalStateException,IOException{
+  public void generateFile(Element element,List<Element> fieldProperty)
+      throws IllegalStateException,IOException{
+    PreferenceItem item = element.getAnnotation(PreferenceItem.class);
+    String table = item.tableName();
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<<<start  generate ." + sourceClassName + "class >>>>>>>>>>");
+    String sourceClassName = typeUtils.asElement(element.asType()).getSimpleName().toString();
+    // auto generate PreferenceItem class
     this.sourceClassName = sourceClassName;
     destClassName = sourceClassName + CLASS_PROCESSOR;
 
@@ -99,35 +106,38 @@ public class BuildPreferenceClass {
     pkgName = elementUtils.getPackageOf(element).getQualifiedName().toString();
     javaWriter = new JavaWriter(classFile.openWriter());
     javaWriter.emitPackage(pkgName)
-        .emitImports(List.class)
         .emitImports("android.content.Context")
         .emitImports("android.content.SharedPreferences")
         .emitEmptyLine()
         .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
         .emitEmptyLine();
-  }
 
-
-  public void generateCode(List<Element> fieldProperty)throws IOException,IllegalStateException {
+    generateConst(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC),
+        "String","table", table );
     generateMethod(fieldProperty);
   }
 
 
-  public void generateConst(EnumSet modifier, String type, String value) throws IOException{
-    javaWriter.emitField(type, "table", modifier, "\""+value+ "\"")
+  public void generateConst(EnumSet modifier, String type,String name, String value)
+      throws IOException{
+    javaWriter.emitField(type, name, modifier, "\""+value+ "\"")
         .emitEmptyLine();
   }
 
 
-  public void generateMethod(List<Element> fieldProperty) throws IOException{
+  private void generateMethod(List<Element> fieldProperty) throws IOException{
     generatePropertyMethod(fieldProperty);
     generateClearMethod();
   }
 
 
-  public void generatePropertyMethod(List<Element> fieldProperty) throws IOException,IllegalStateException{
+  private void generatePropertyMethod(List<Element> fieldProperty)
+      throws IOException,IllegalStateException{
     for (Element element : fieldProperty) {
 //    field type eg: int,boolean
+      PreferenceField item = element.getAnnotation(PreferenceField.class);
+      String fieldDefaultValue = item.defaultValue();
+
       TypeMirror fieldType = element.asType();
       String type = getPropertyType(typeUtils,elementUtils,fieldType);
       String propertyName = element.getSimpleName().toString();
@@ -136,7 +146,8 @@ public class BuildPreferenceClass {
       javaWriter.beginMethod(BASIC_TYPE_VOID, getSetMethodName(false,propertyName),EnumSet.of(Modifier.PUBLIC),
           CONTEXT,CTX,type,VALUE);
       String methodSuffix = toUpperCase(type);
-      javaWriter.emitStatement("SharedPreferences sharedPreferences = %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
+      javaWriter.emitStatement("SharedPreferences sharedPreferences " +
+          "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
           CTX, destClassName);
       javaWriter.emitStatement("SharedPreferences.Editor  editor = sharedPreferences.edit()");
       String preferenceKey = getPreferenceKey(sourceClassName,propertyName);
@@ -147,27 +158,15 @@ public class BuildPreferenceClass {
       // get 方法
       javaWriter.beginMethod(type, getSetMethodName(true,propertyName),EnumSet.of(Modifier.PUBLIC),
           CONTEXT,CTX);
-      javaWriter.emitStatement("SharedPreferences sharedPreferences = %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
+      javaWriter.emitStatement("SharedPreferences sharedPreferences " +
+          "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
           CTX ,destClassName);
-      String defaultValue = getDeFaultValue(type);
-      javaWriter.emitStatement("%s value = sharedPreferences.get"+methodSuffix+"(%s,"+defaultValue+")",
-          type, "\""+preferenceKey+"\"");
-      javaWriter.emitStatement("return %s","value");
+      String defaultValue = getDeFaultValue(type, fieldDefaultValue);
+      javaWriter.emitStatement("return sharedPreferences.get"+methodSuffix+"(%s,"+defaultValue+")",
+           "\""+preferenceKey+"\"");
       javaWriter.endMethod();
 
-      // clear single property method but we don't need this method
-  /*    javaWriter.beginMethod("void", getClearMethodName(propertyName),EnumSet.of(Modifier.PUBLIC),
-          CONTEXT,CTX);
-      javaWriter.emitStatement("SharedPreferences sharedPreferences = %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
-          CTX ,destClassName);
-      javaWriter.emitStatement("SharedPreferences.Editor  editor = sharedPreferences.edit()");
-      javaWriter.emitStatement("editor.put%s(" + "\""+preferenceKey+ "\"" + ",%s)",methodSuffix,defaultValue);
-      javaWriter.emitStatement("editor.apply()");
-      javaWriter.endMethod();
-      javaWriter.emitEmptyLine();
-*/
     }
-
   }
 
   public boolean isNeedPackageName() {
@@ -177,7 +176,8 @@ public class BuildPreferenceClass {
 
   public void generateClearMethod() throws IOException{
     javaWriter.beginMethod("void", "clear",EnumSet.of(Modifier.PUBLIC), CONTEXT,CTX);
-    javaWriter.emitStatement("SharedPreferences sharedPreferences = %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
+    javaWriter.emitStatement("SharedPreferences sharedPreferences " +
+        "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
         CTX ,destClassName);
     javaWriter.emitStatement("SharedPreferences.Editor  editor = sharedPreferences.edit()");
     javaWriter.emitStatement("editor.clear()");
@@ -187,6 +187,7 @@ public class BuildPreferenceClass {
 
 
   public void endFile() throws IOException{
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<<< end file ." + sourceClassName + "class >>>>>>>>>>");
     if (javaWriter != null) {
       javaWriter.endType();
       javaWriter.close();
@@ -204,11 +205,15 @@ public class BuildPreferenceClass {
 
 
 
+  // double 类型 转为float 因为SharedPreference 没有getDouble方法
   private String getPropertyType(Types typeUtils,Elements elementUtils,TypeMirror typeMirror) {
     // 基本类型
     TypeKind typeKind = typeMirror.getKind();
     if (typeKind.isPrimitive()) {
       String type = typeKind.toString().toLowerCase();
+      if (type.equals("double")) {
+        type = "float";
+      }
       return type;
     }
     if (typeUtils.isAssignable(typeMirror, getTypeMirror(elementUtils,String.class))) {
@@ -245,20 +250,22 @@ public class BuildPreferenceClass {
   }
 
   // key default value
-  private String getDeFaultValue(String type) {
+  // double
+  private String getDeFaultValue(String type,String fieldDefaultValue) {
     if (type == null) {
       throw new IllegalStateException();
     }
     if (type.equals(BASIC_TYPE_INT)) {
-      return DEFAULT_INT;
+      return PreferenceUtils.isInt(fieldDefaultValue) ? fieldDefaultValue : DEFAULT_INT;
     } else if (type.equals(BASIC_TYPE_STRING)){
-      return DEFAULT_STRING;
+      return PreferenceUtils.isString(fieldDefaultValue) ? fieldDefaultValue :DEFAULT_STRING;
     } else if (type.equals(BASIC_TYPE_BOOLEAN)) {
-      return DEFAULT_BOOLEAN;
-    } else if (type.equals(BASIC_TYPE_LONG)
-        || type.equals(BASIC_TYPE_DOUBLE)
+      return PreferenceUtils.isBoolean(fieldDefaultValue) ? fieldDefaultValue : DEFAULT_BOOLEAN;
+    } else if (type.equals(BASIC_TYPE_LONG)) {
+      return PreferenceUtils.isLong(fieldDefaultValue) ? fieldDefaultValue : DEFAULT_INT;
+    } else if(type.equals(BASIC_TYPE_DOUBLE)
         || type.equals(BASIC_TYPE_FLOAT)) {
-      return DEFAULT_INT;
+      return PreferenceUtils.isFloat(fieldDefaultValue) ? fieldDefaultValue : DEFAULT_INT;
     }
     return null;
   }
