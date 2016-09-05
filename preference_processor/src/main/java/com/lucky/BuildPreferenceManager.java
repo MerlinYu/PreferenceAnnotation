@@ -73,6 +73,7 @@ public class BuildPreferenceManager {
     javaWriter.emitPackage(pkgName)
         .emitImports("android.content.Context")
         .emitEmptyLine()
+        .emitEmptyLine()
         .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
         .emitEmptyLine();
   }
@@ -110,7 +111,8 @@ public class BuildPreferenceManager {
 //generate static get Preference method
   public void generateStaticMethod(String className) throws IOException{
 //    javaWriter.emitImports(type);
-    javaWriter.beginMethod(className,getStaticMethodName(className),EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
+    javaWriter.beginMethod(className,getStaticMethodName(className),
+        EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
     String valueName = getValueName(className);
     javaWriter.beginControlFlow("if( %s == null )",valueName);
     javaWriter.beginControlFlow("synchronized (%s.class)",className);
@@ -126,19 +128,20 @@ public class BuildPreferenceManager {
     if (preferenceList == null) {
       return;
     }
-    javaWriter.beginMethod("void", "clear", EnumSet.of(Modifier.PUBLIC,Modifier.STATIC),CONTEXT,CTX);
+    javaWriter.beginMethod("void", "clearAll",
+        EnumSet.of(Modifier.PUBLIC,Modifier.STATIC),CONTEXT,CTX);
     for (String preference : preferenceList) {
       String propertyName = getValueName(preference);
-      javaWriter.beginControlFlow("if (%s != null)",propertyName);
-      javaWriter.emitStatement("%s.clear(%s)",propertyName,CTX);
-      String str = String.format("%s.clear(%s)",propertyName,CTX);
-      messager.printMessage(Diagnostic.Kind.OTHER,  str);
+      javaWriter.beginControlFlow("if (%s == null)",propertyName);
+      javaWriter.emitStatement("%s = new %s() ",propertyName,preference);
       javaWriter.endControlFlow();
+      javaWriter.emitStatement("%s.clear(%s)",propertyName,CTX).emitEmptyLine();
     }
     javaWriter.endMethod();
   }
 
-  public void generateConst(EnumSet modifier, String type, String name,String value) throws IOException{
+  public void generateConst(EnumSet modifier, String type, String name,String value)
+      throws IOException{
     javaWriter.emitField(type, name, modifier, value);
   }
 
@@ -155,7 +158,6 @@ public class BuildPreferenceManager {
       return "_" + className.replace(CLASS_PROCESSOR,"");
     }
     return "_" + toLowerCase(className);
-
   }
 
   // 首字母小写转化为大写

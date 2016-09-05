@@ -8,7 +8,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import lucky.com.preferenceannotion.AutoPreferenceManager;
 
@@ -18,13 +20,27 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+    Button btn = (Button) findViewById(R.id.set_btn);
+    btn.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        Toast.makeText(MainActivity.this,"account set value!",Toast.LENGTH_LONG).show();
+        AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
+        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
 
-//    AutoPerferenceManager autoPerferenceManager;
-    int id  = AutoPreferenceManager.LoginPreference().getAd(this);
-    AutoPreferenceManager.LoginPreference().setId(this,"helloworld!");
-    String name = AutoPreferenceManager.LoginPreference().getId(this);
-    Log.v("===tag===","  AutoPreferenceManager ====" +name);
+      }
+    });
 
+    Button getBtn = (Button) findViewById(R.id.get_btn);
+    getBtn.setOnClickListener(new View.OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        int id  = AutoPreferenceManager.LoginPreference().getAd(MainActivity.this);
+        Log.v("===tag===","  AutoPreferenceManager ====" +id);
+        AutoPreferenceManager.clearAll(MainActivity.this);
+
+      }
+    });
 
 
 
