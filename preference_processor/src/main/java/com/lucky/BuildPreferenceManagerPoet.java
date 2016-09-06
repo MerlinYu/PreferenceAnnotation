@@ -1,17 +1,20 @@
 package com.lucky;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterizedTypeName;
+import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 import com.squareup.javawriter.JavaWriter;
-import com.squareup.javawriter.StringLiteral;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.lang.reflect.Type;
+import java.nio.file.FileSystem;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -37,13 +40,12 @@ import javax.tools.JavaFileObject;
  * </div>
  */
 
-public class BuildPreferenceManager {
+public class BuildPreferenceManagerPoet {
   private static final String CLASS_PROCESSOR = "Processor";
   private static final String CONTEXT = "Context";
   private static final String CTX = "ctx";
 
   private static final String DEFAULT_MANAGER_NAME = "AutoPreferenceManager";
-
   String pkgName;
   String destClassName;
   String sourceClassname;
@@ -52,17 +54,14 @@ public class BuildPreferenceManager {
   Elements elementUtils;
   Messager messager;
   JavaWriter javaWriter;
-  Map<String,String> staticClassList;
 
-  private BuildPreferenceManager() {
-
-  }
+  ArrayList<String> preferenceList = new ArrayList<>(20);
 
 
-  public BuildPreferenceManager(final Filer filer,
-                                final Types typeUtils,
-                                final Elements elementUtils,
-                                final Messager messager) {
+  public BuildPreferenceManagerPoet(final Filer filer,
+                                    final Types typeUtils,
+                                    final Elements elementUtils,
+                                    final Messager messager) {
     this.filer = filer;
     this.elementUtils = elementUtils;
     this.typeUtils = typeUtils;
@@ -77,26 +76,57 @@ public class BuildPreferenceManager {
   public void generateFile(String sourceClassName) throws IllegalStateException,IOException{
     this.sourceClassname= sourceClassName;
     destClassName = sourceClassName;
-    JavaFileObject managerFile = filer.createSourceFile(destClassName);
 
-    javaWriter = new JavaWriter(managerFile.openWriter());
-    ArrayList<String> importsList = getImports(staticClassList);
-    javaWriter.emitPackage(pkgName)
-        .emitImports("android.content.Context")
-        .emitImports(importsList)
-        .emitEmptyLine()
-        .emitEmptyLine()
-        .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
-        .emitEmptyLine();
+    MethodSpec main = MethodSpec.methodBuilder("main")
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
+        .returns(void.class)
+        .addParameter(String[].class, "args")
+        .addStatement("$T.out.println($S)", System.class, "Hello, JavaPoet!")
+        .build();
 
-    for (Map.Entry<String,String> entry : staticClassList.entrySet()) {
-      String className = entry.getKey();
-      String pkgName = entry.getValue();
-      generatePropertyClass(className, pkgName);
+    String className = "AccountPreferenceProcessor";
+
+    //list 拼装
+    ClassName customerClass = ClassName.get(pkgName, className);
+    ClassName list = ClassName.get("java.util","List");
+    TypeName type = ParameterizedTypeName.get(list, customerClass);
+
+    MethodSpec account = MethodSpec.methodBuilder("get")
+        .addModifiers(Modifier.PUBLIC)
+        .returns(customerClass)
+        .addStatement("$T result = new $T()",customerClass,customerClass)
+        .addStatement(" return result")
+        .build();
+
+    TypeSpec helloWorld = TypeSpec.classBuilder("HelloWorld")
+        .addModifiers(Modifier.PUBLIC)
+
+        .addMethod(main)
+        .addMethod(account)
+        .build();
+    messager.printMessage(Diagnostic.Kind.NOTE," ============ hello world ===========" + pkgName);
+
+    JavaFile javaFile = JavaFile.builder(pkgName, helloWorld)
+        .build();
+
+    messager.printMessage(Diagnostic.Kind.NOTE," =======  " + javaFile.toString());
+
+
+    try {
+      JavaFileObject classFile = filer.createSourceFile("HelloWorld");
+      final Writer writer = new BufferedWriter(classFile.openWriter());
+      javaFile.writeTo(writer);
+      writer.close();
+
+
+    } catch (Exception e) {
+      e.printStackTrace();
     }
-    generateClear();
-    javaWriter.endType();
-    javaWriter.close();
+
+
+//    javaFile.writeTo(j);
+
+
   }
 
 
@@ -112,35 +142,26 @@ public class BuildPreferenceManager {
     return pkgName;
   }
 
-  public void addStaticClass(String pkgName, String className) {
-    if (PreferenceUtils.isNull(pkgName) || PreferenceUtils.isNull(className)) {
-      return;
-    }
-    if (staticClassList == null) {
-      staticClassList = new HashMap<>(20);
-    }
-    String key =  pkgName + "." + className;
-    staticClassList.put(className, pkgName);
-  }
-
   /**
    * generate class property {class a = null}
-   * @param pkgName  the class belong package com.*.*;
-   * @param className class name like:AccountPreferenceProcessor
+   *
    * * */
-  public void generatePropertyClass(String className,String pkgName) throws IOException{
+  public void generatePropertyClass(String pkgName,String className) throws IOException{
     if (pkgName == null || className == null) {
       return;
     }
+    preferenceList.add(className);
+    String classType = pkgName+ "." + className;
     String valueName = getValueName(className);
-    generateConst(EnumSet.of(Modifier.PRIVATE,Modifier.STATIC),className,
+    messager.printMessage(Diagnostic.Kind.OTHER," class type :" + classType);
+    generateConst(EnumSet.of(Modifier.PRIVATE,Modifier.STATIC),classType,
         valueName,"null");
     generateStaticMethod(className);
   }
 
-
 //generate static get Preference method
   public void generateStaticMethod(String className) throws IOException{
+//    javaWriter.emitImports(type);
     javaWriter.beginMethod(pkgName+"."+className,getStaticMethodName(className),
         EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
     String valueName = getValueName(className);
@@ -155,16 +176,15 @@ public class BuildPreferenceManager {
   }
 
   public void generateClear() throws IOException{
-    if (staticClassList == null) {
+    if (preferenceList == null) {
       return;
     }
     javaWriter.beginMethod("void", "clearAll",
         EnumSet.of(Modifier.PUBLIC,Modifier.STATIC),CONTEXT,CTX);
-    for (Map.Entry<String,String> entry: staticClassList.entrySet()) {
-      String classNameKey = entry.getKey();
-      String propertyName = getValueName(classNameKey);
+    for (String preference : preferenceList) {
+      String propertyName = getValueName(preference);
       javaWriter.beginControlFlow("if (%s == null)",propertyName);
-      javaWriter.emitStatement("%s = new %s() ",propertyName,classNameKey);
+      javaWriter.emitStatement("%s = new %s() ",propertyName,preference);
       javaWriter.endControlFlow();
       javaWriter.emitStatement("%s.clear(%s)",propertyName,CTX).emitEmptyLine();
     }
@@ -210,28 +230,8 @@ public class BuildPreferenceManager {
   }
 
 
-  private ArrayList<String> getImports(Map<String,String> classList) {
-    if (classList == null) {
-      return null;
-    }
-    ArrayList<String> importsList = new ArrayList<>(20);
-    for (Map.Entry<String,String> entry : classList.entrySet()) {
-      String key = entry.getKey();
-      String pkg = entry.getValue();
-      importsList.add(pkg + "."+ key);
-    }
-    importsList.trimToSize();
-    return importsList;
+  public void endFile() throws IOException{
+    javaWriter.endType();
+    javaWriter.close();
   }
-
-/*  private String removeSameSymbol(String string) {
-
-    Pattern p = Pattern.compile("%%\\d+");
-    Matcher m = p.matcher(string);
-    if (m.find()) {
-      string = string.substring(0,m.start());
-      messager.printMessage(Diagnostic.Kind.OTHER," ==== " + string);
-    }
-    return string;
-  }*/
 }

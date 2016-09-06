@@ -84,6 +84,11 @@ public class PreferenceUtils {
   }
 
 
+  public static boolean checkNotNull() {
+    return false;
+  }
+
+
 
   public static void main(String... args) {
     System.out.println("============== is int ===========");

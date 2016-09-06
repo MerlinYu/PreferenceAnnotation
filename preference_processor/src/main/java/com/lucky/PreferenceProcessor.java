@@ -60,6 +60,10 @@ public class PreferenceProcessor extends AbstractProcessor {
 
   private static String NOTE = " preference annotation processor ";
 
+  /**
+   * @return true : this annotation is received by this processor,
+   *                 other sub Processor will not receive this annotation.
+   * */
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
     if (roundEnv.processingOver()) {
@@ -95,7 +99,7 @@ public class PreferenceProcessor extends AbstractProcessor {
     String uniquePkgName = getUniquePkgName(preferenceObjects);
     if (uniquePkgName == null) {
       messager.printMessage(Diagnostic.Kind.ERROR, "can't get unique pkg name ");
-      return true;
+      return false;
     }
     messager.printMessage(Diagnostic.Kind.NOTE, "pkg name " + uniquePkgName);
 
@@ -108,17 +112,19 @@ public class PreferenceProcessor extends AbstractProcessor {
      if (preferenceManager.isNeedPackageName()) {
        preferenceManager.setPackageName(uniquePkgName);
      }
-     preferenceManager.generateFile();
      for (final Map.Entry<Element, List<Element>> entry: preferenceObjects.entrySet()) {
        Element classObject = entry.getKey();
        List<Element> fieldProperty = entry.getValue();
        BuildPreferenceClass itemClass = new BuildPreferenceClass(filer, typeUtils, elementUtils, messager);
-       itemClass.generateFile(classObject,fieldProperty);
-       itemClass.endFile();
-       preferenceManager.generatePropertyClass(itemClass.getPackageName(),itemClass.getDestClassName());
+       boolean success = itemClass.generateFile(classObject, fieldProperty);
+       if (success) {
+         preferenceManager.addStaticClass(itemClass.getPackageName(),itemClass.getDestClassName());
+       }
      }
-     preferenceManager.generateClear();
-     preferenceManager.endFile();
+     preferenceManager.generateFile();
+
+     // preferenceManager.generateClear();
+    // preferenceManager.endFile();
     } catch (IllegalStateException e) {
       messager.printMessage(Diagnostic.Kind.ERROR, "IllegalStateException" + e.getMessage());
     } catch (IOException e) {
@@ -127,6 +133,16 @@ public class PreferenceProcessor extends AbstractProcessor {
       messager.printMessage(Diagnostic.Kind.ERROR, "NullPointerException " + e.getMessage());
    }
     messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor finished！>>>>>>>>>>>>");
+
+ /*   BuildPreferenceManagerPoet poet = new BuildPreferenceManagerPoet(filer,typeUtils,elementUtils,messager);
+    poet.setPackageName(uniquePkgName);
+    try {
+      poet.generateFile();
+
+    }catch (IOException e) {
+       e.printStackTrace();
+    }
+*/
 
     return false;
   }

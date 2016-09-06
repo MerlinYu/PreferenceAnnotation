@@ -1,5 +1,6 @@
 package com.lucky;
 
+import com.squareup.javapoet.MethodSpec;
 import com.squareup.javawriter.JavaWriter;
 
 import java.io.IOException;
@@ -48,7 +49,7 @@ import javax.tools.JavaFileObject;
  *
  *
  */
-public class BuildPreferenceClass {
+public class BuildPreferenceClassPoet {
 
   private static final String CLASS_PROCESSOR = "Processor";
   private static final String SET = "set";
@@ -78,15 +79,11 @@ public class BuildPreferenceClass {
   Messager messager;
   JavaWriter javaWriter;
 
-  private BuildPreferenceClass() {
 
-  }
-
-
-  public BuildPreferenceClass(final Filer filer,
-                              final Types typeUtils,
-                              final Elements elementUtils,
-                              final Messager messager) {
+  public BuildPreferenceClassPoet(final Filer filer,
+                                  final Types typeUtils,
+                                  final Elements elementUtils,
+                                  final Messager messager) {
     this.filer = filer;
     this.elementUtils = elementUtils;
     this.typeUtils = typeUtils;
@@ -95,46 +92,36 @@ public class BuildPreferenceClass {
 
 
 
-  public boolean generateFile(Element element, List<Element> fieldProperty) {
+  public void generateFile(Element element,List<Element> fieldProperty)
+      throws IllegalStateException,IOException{
     PreferenceItem item = element.getAnnotation(PreferenceItem.class);
-
     String table = item.tableName();
     String sourceClassName = typeUtils.asElement(element.asType()).getSimpleName().toString();
     // auto generate PreferenceItem class
     this.sourceClassName = sourceClassName;
     destClassName = sourceClassName + CLASS_PROCESSOR;
-    messager.printMessage(Diagnostic.Kind.NOTE, "generate " + destClassName + " .class...");
+    messager.printMessage(Diagnostic.Kind.NOTE, "generate %s.class..." + destClassName);
+
+//    MethodSpec main = MethodSpec.methodBuilder("main")
+
+
+
+
+    JavaFileObject classFile = filer.createSourceFile(destClassName, element);
+
+    // generate class file
     pkgName = elementUtils.getPackageOf(element).getQualifiedName().toString();
+    javaWriter = new JavaWriter(classFile.openWriter());
+    javaWriter.emitPackage(pkgName)
+        .emitImports("android.content.Context")
+        .emitImports("android.content.SharedPreferences")
+        .emitEmptyLine()
+        .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
+        .emitEmptyLine();
 
-    try {
-      JavaFileObject classFile = filer.createSourceFile(pkgName+"."+destClassName, element);
-
-      javaWriter = new JavaWriter(classFile.openWriter());
-      javaWriter.emitPackage(pkgName)
-          .emitImports("android.content.Context")
-          .emitImports("android.content.SharedPreferences")
-          .emitEmptyLine()
-          .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
-          .emitEmptyLine();
-
-      generateConst(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC),
-          "String","table", table );
-      generateMethod(fieldProperty);
-      javaWriter.endType();
-      messager.printMessage(Diagnostic.Kind.NOTE, destClassName+" end...");
-    } catch (IOException e) {
-      messager.printMessage(Diagnostic.Kind.ERROR, "IOException " + e.getMessage());
-      return false;
-    } finally {
-      try {
-        if (javaWriter != null) {
-          javaWriter.close();
-        }
-      } catch (IOException e) {
-        messager.printMessage(Diagnostic.Kind.ERROR, "IOException " + e.getMessage());
-      }
-    }
-    return true;
+    generateConst(EnumSet.of(Modifier.PUBLIC, Modifier.FINAL, Modifier.STATIC),
+        "String","table", table );
+    generateMethod(fieldProperty);
   }
 
 
@@ -163,8 +150,8 @@ public class BuildPreferenceClass {
       String propertyName = element.getSimpleName().toString();
 
       // generate set method
-      javaWriter.beginMethod(BASIC_TYPE_VOID, getSetMethodName(false,propertyName),
-          EnumSet.of(Modifier.PUBLIC), CONTEXT, CTX, type, VALUE);
+      javaWriter.beginMethod(BASIC_TYPE_VOID, getSetMethodName(false,propertyName),EnumSet.of(Modifier.PUBLIC),
+          CONTEXT,CTX,type,VALUE);
       String methodSuffix = toUpperCase(type);
       javaWriter.emitStatement("SharedPreferences sharedPreferences " +
           "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
@@ -206,6 +193,13 @@ public class BuildPreferenceClass {
   }
 
 
+  public void endFile() throws IOException{
+    messager.printMessage(Diagnostic.Kind.NOTE, destClassName+" end...");
+    if (javaWriter != null) {
+      javaWriter.endType();
+      javaWriter.close();
+    }
+  }
 
   public String getDestClassName() {
     return destClassName;
@@ -242,12 +236,16 @@ public class BuildPreferenceClass {
 
   // set or get 方法的名字
   private String getSetMethodName(boolean isGet,  String property) {
-    if (PreferenceUtils.isNull(property)) {
+    if (isNull(property)) {
       return null;
     }
     return isGet ? GET + toUpperCase(property) : SET + toUpperCase(property);
   }
 
+  // clear method name
+  private String getClearMethodName(String property) {
+    return CLEAR + toUpperCase(property);
+  }
 
   // 首字母小写转化为大写
   private String toUpperCase(String type) {
@@ -284,6 +282,11 @@ public class BuildPreferenceClass {
     return className +"_"+ propertyName;
   }
 
-
+  private boolean isNull(String string) {
+    if (string == null || string.length() == 0) {
+      return true;
+    }
+    return false;
+  }
 
 }

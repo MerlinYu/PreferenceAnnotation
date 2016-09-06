@@ -12,7 +12,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import lucky.com.preferenceannotion.AutoPreferenceManager;
+import com.lucky.PreferenceField;
+import com.lucky.PreferenceItem;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -25,9 +26,9 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         Toast.makeText(MainActivity.this,"account set value!",Toast.LENGTH_LONG).show();
-        AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
+    /*    AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
         AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
-
+*/
       }
     });
 
@@ -35,16 +36,26 @@ public class MainActivity extends AppCompatActivity {
     getBtn.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        int id  = AutoPreferenceManager.LoginPreference().getAd(MainActivity.this);
+   /*     int id  = AutoPreferenceManager.LoginPreference().getAd(MainActivity.this);
         Log.v("===tag===","  AutoPreferenceManager ====" +id);
         AutoPreferenceManager.clearAll(MainActivity.this);
-
+        HelloWorld helloWorld = new HelloWorld();
+        helloWorld.get();
+*/
       }
     });
 
 
 
 
+  }
+
+
+  @PreferenceItem
+  class NamePreference{
+
+    @PreferenceField
+    String hello;
   }
 
 
