@@ -1,17 +1,14 @@
 package com.lucky;
 
 import com.squareup.javawriter.JavaWriter;
-import com.squareup.javawriter.StringLiteral;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.InputMismatchException;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -53,10 +50,9 @@ public class BuildPreferenceManager {
   Messager messager;
   JavaWriter javaWriter;
   Map<String,String> staticClassList;
+  Set<String> successSet;
 
-  private BuildPreferenceManager() {
-
-  }
+  private BuildPreferenceManager() {}
 
 
   public BuildPreferenceManager(final Filer filer,
@@ -81,10 +77,10 @@ public class BuildPreferenceManager {
 
     javaWriter = new JavaWriter(managerFile.openWriter());
     ArrayList<String> importsList = getImports(staticClassList);
+    messager.printMessage(Diagnostic.Kind.NOTE, " ====== " + importsList.toString());
     javaWriter.emitPackage(pkgName)
         .emitImports("android.content.Context")
         .emitImports(importsList)
-        .emitEmptyLine()
         .emitEmptyLine()
         .beginType(destClassName, "class", EnumSet.of(Modifier.PUBLIC))
         .emitEmptyLine();
@@ -92,9 +88,14 @@ public class BuildPreferenceManager {
     for (Map.Entry<String,String> entry : staticClassList.entrySet()) {
       String className = entry.getKey();
       String pkgName = entry.getValue();
-      generatePropertyClass(className, pkgName);
+      if(generatePropertyClass(className, pkgName)) {
+        if (successSet == null) {
+          successSet = new HashSet<>(20);
+        }
+        successSet.add(className);
+      }
     }
-    generateClear();
+    generateClear(successSet);
     javaWriter.endType();
     javaWriter.close();
   }
@@ -119,7 +120,6 @@ public class BuildPreferenceManager {
     if (staticClassList == null) {
       staticClassList = new HashMap<>(20);
     }
-    String key =  pkgName + "." + className;
     staticClassList.put(className, pkgName);
   }
 
@@ -128,45 +128,52 @@ public class BuildPreferenceManager {
    * @param pkgName  the class belong package com.*.*;
    * @param className class name like:AccountPreferenceProcessor
    * * */
-  public void generatePropertyClass(String className,String pkgName) throws IOException{
+  public boolean generatePropertyClass(String className,String pkgName) {
     if (pkgName == null || className == null) {
-      return;
+      return false;
     }
     String valueName = getValueName(className);
-    generateConst(EnumSet.of(Modifier.PRIVATE,Modifier.STATIC),className,
-        valueName,"null");
-    generateStaticMethod(className);
+    try {
+      generateConst(EnumSet.of(Modifier.PRIVATE,Modifier.STATIC),className,
+          valueName,"null");
+      generateStaticMethod(className);
+    } catch (IOException e) {
+      messager.printMessage(Diagnostic.Kind.ERROR, " Generate Property Filed IOException!" + e.getMessage());
+      return false;
+    }
+    return true;
   }
 
 
 //generate static get Preference method
   public void generateStaticMethod(String className) throws IOException{
-    javaWriter.beginMethod(pkgName+"."+className,getStaticMethodName(className),
+    javaWriter.beginMethod(className, getStaticMethodName(className),
         EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
     String valueName = getValueName(className);
-    javaWriter.beginControlFlow("if( %s == null )",valueName);
-    javaWriter.beginControlFlow("synchronized (%s.class)",className);
-    javaWriter.emitStatement("%s = new %s()",valueName,className);
-    javaWriter.endControlFlow();
-    javaWriter.endControlFlow();
-    javaWriter.emitStatement("return %s",valueName);
-    javaWriter.endMethod()
+    javaWriter.beginControlFlow("if( %s == null )",valueName)
+        .beginControlFlow("synchronized (%s.class)",className)
+        .emitStatement("%s = new %s()",valueName,className)
+        .endControlFlow()
+        .endControlFlow()
+        .emitStatement("return %s",valueName)
+        .endMethod()
         .emitEmptyLine();
   }
 
-  public void generateClear() throws IOException{
-    if (staticClassList == null) {
+  public void generateClear(Set<String> clearClassList) throws IOException{
+    if (clearClassList == null) {
       return;
     }
     javaWriter.beginMethod("void", "clearAll",
         EnumSet.of(Modifier.PUBLIC,Modifier.STATIC),CONTEXT,CTX);
-    for (Map.Entry<String,String> entry: staticClassList.entrySet()) {
-      String classNameKey = entry.getKey();
-      String propertyName = getValueName(classNameKey);
-      javaWriter.beginControlFlow("if (%s == null)",propertyName);
-      javaWriter.emitStatement("%s = new %s() ",propertyName,classNameKey);
-      javaWriter.endControlFlow();
-      javaWriter.emitStatement("%s.clear(%s)",propertyName,CTX).emitEmptyLine();
+    Iterator iterator = clearClassList.iterator();
+    while (iterator.hasNext()) {
+      String classClearName = (String)iterator.next();
+      String propertyName = getValueName(classClearName);
+      javaWriter.beginControlFlow("if (%s == null)",propertyName)
+          .emitStatement("%s = new %s() ",propertyName,classClearName)
+          .endControlFlow()
+          .emitStatement("%s.clear(%s)",propertyName,CTX).emitEmptyLine();
     }
     javaWriter.endMethod();
   }
@@ -218,7 +225,10 @@ public class BuildPreferenceManager {
     for (Map.Entry<String,String> entry : classList.entrySet()) {
       String key = entry.getKey();
       String pkg = entry.getValue();
-      importsList.add(pkg + "."+ key);
+      /** class's package  is the same as AutoPreferenceManager's package name don't need to imports its package*/
+      if (!pkg.equals(pkgName)) {
+        importsList.add(pkg + "."+ key);
+      }
     }
     importsList.trimToSize();
     return importsList;
