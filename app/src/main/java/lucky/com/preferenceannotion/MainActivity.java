@@ -26,9 +26,9 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         Toast.makeText(MainActivity.this,"account set value!",Toast.LENGTH_LONG).show();
-    /*    AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
+        AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
         AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
-*/
+
       }
     });
 
@@ -36,28 +36,11 @@ public class MainActivity extends AppCompatActivity {
     getBtn.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-   /*     int id  = AutoPreferenceManager.LoginPreference().getAd(MainActivity.this);
-        Log.v("===tag===","  AutoPreferenceManager ====" +id);
+        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
         AutoPreferenceManager.clearAll(MainActivity.this);
-        HelloWorld helloWorld = new HelloWorld();
-        helloWorld.get();
-*/
       }
     });
 
-
-
-
   }
-
-
-  @PreferenceItem
-  class NamePreference{
-
-    @PreferenceField
-    String hello;
-  }
-
-
 
 }

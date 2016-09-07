@@ -20,6 +20,4 @@ public class AccountPreference {
   @PreferenceField( defaultValue = "10")
   public int kitty;
 
-  @PreferenceField (defaultValue = "123")
-  public double merlin;
 }

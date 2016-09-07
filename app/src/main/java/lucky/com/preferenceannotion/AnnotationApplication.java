@@ -1,10 +1,7 @@
 package lucky.com.preferenceannotion;
 
 import android.app.Application;
-import android.preference.PreferenceManager;
 import android.util.Log;
-
-import com.lucky.PreferenceConstant;
 
 /**
  * Created by yuchao on 8/26/16.
