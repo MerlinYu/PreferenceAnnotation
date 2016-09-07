@@ -83,6 +83,24 @@ public class PreferenceUtils {
     return false;
   }
 
+  // string first character to return Upper character
+  public static String toUpperCase(String type) {
+    char[] ch = type.toCharArray();
+    if (ch[0] >= 'a' && ch[0] <= 'z' ) {
+      ch[0] -=32;
+    }
+    return String.valueOf(ch);
+  }
+
+  // string first character to return Lower character
+  public static String toLowerCase(String type) {
+    char[] ch = type.toCharArray();
+    if (ch[0] >= 'a' && ch[0] <= 'z' ) {
+      ch[0] +=32;
+    }
+    return String.valueOf(ch);
+  }
+
 
   public static boolean checkNotNull() {
     return false;
@@ -92,7 +110,6 @@ public class PreferenceUtils {
 
   public static void main(String... args) {
     System.out.println("============== is int ===========");
-
     boolean result = isInt("");
     System.out.println(result);
 //    result = isInt("123");
@@ -112,7 +129,5 @@ public class PreferenceUtils {
     System.out.println(result);
     result = isFloat("123.0fffff");
     System.out.println(result);
-
-
   }
 }

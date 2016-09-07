@@ -53,7 +53,6 @@ public class BuildPreferenceClass {
   private static final String CLASS_PROCESSOR = "Processor";
   private static final String SET = "set";
   private static final String GET = "get";
-  private static final String CLEAR = "clear";
   private static final String CONTEXT = "Context";
   private static final String CTX = "ctx";
   private static final String BASIC_TYPE_STRING = "String";
@@ -103,7 +102,7 @@ public class BuildPreferenceClass {
     // auto generate PreferenceItem class
     this.sourceClassName = sourceClassName;
     destClassName = sourceClassName + CLASS_PROCESSOR;
-    messager.printMessage(Diagnostic.Kind.NOTE, "generate " + destClassName + " .class...");
+    messager.printMessage(Diagnostic.Kind.NOTE,  destClassName + " .class...");
     pkgName = elementUtils.getPackageOf(element).getQualifiedName().toString();
 
     try {
@@ -121,8 +120,9 @@ public class BuildPreferenceClass {
           "String","table", table );
       generateMethod(fieldProperty);
       javaWriter.endType();
-      messager.printMessage(Diagnostic.Kind.NOTE, destClassName+" end...");
+      messager.printMessage(Diagnostic.Kind.NOTE, destClassName + " success");
     } catch (IOException e) {
+      messager.printMessage(Diagnostic.Kind.NOTE, destClassName + " failed");
       messager.printMessage(Diagnostic.Kind.ERROR, "IOException " + e.getMessage());
       return false;
     } finally {
@@ -165,7 +165,7 @@ public class BuildPreferenceClass {
       // generate set method
       javaWriter.beginMethod(BASIC_TYPE_VOID, getSetMethodName(false,propertyName),
           EnumSet.of(Modifier.PUBLIC), CONTEXT, CTX, type, VALUE);
-      String methodSuffix = toUpperCase(type);
+      String methodSuffix = PreferenceUtils.toUpperCase(type);
       javaWriter.emitStatement("SharedPreferences sharedPreferences " +
           "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
           CTX, destClassName);
@@ -175,13 +175,13 @@ public class BuildPreferenceClass {
       javaWriter.emitStatement("editor.apply()");
       javaWriter.endMethod();
 
-      // get 方法
+      // get method
       javaWriter.beginMethod(type, getSetMethodName(true,propertyName),EnumSet.of(Modifier.PUBLIC),
           CONTEXT,CTX);
       javaWriter.emitStatement("SharedPreferences sharedPreferences " +
           "= %s.getSharedPreferences(%s.table,Context.MODE_PRIVATE)",
           CTX ,destClassName);
-      String defaultValue = getDeFaultValue(type, fieldDefaultValue);
+      String defaultValue = getDefaultValue(type, fieldDefaultValue);
       javaWriter.emitStatement("return sharedPreferences.get"+methodSuffix+"(%s,"+defaultValue+")",
            "\""+preferenceKey+"\"");
       javaWriter.endMethod();
@@ -216,11 +216,8 @@ public class BuildPreferenceClass {
   }
 
 
-
-
-  // double 类型 转为float 因为SharedPreference 没有getDouble方法
   private String getPropertyType(Types typeUtils,Elements elementUtils,TypeMirror typeMirror) {
-    // 基本类型
+    // basic type
     TypeKind typeKind = typeMirror.getKind();
     if (typeKind.isPrimitive()) {
       String type = typeKind.toString().toLowerCase();
@@ -240,27 +237,26 @@ public class BuildPreferenceClass {
   }
 
 
-  // set or get 方法的名字
+  /**
+   * @param isGet
+   * @param property property name like :String name,name is property
+   * @return method name like:getName;
+   * */
   private String getSetMethodName(boolean isGet,  String property) {
     if (PreferenceUtils.isNull(property)) {
       return null;
     }
-    return isGet ? GET + toUpperCase(property) : SET + toUpperCase(property);
+    return isGet ?
+        GET + PreferenceUtils.toUpperCase(property) : SET + PreferenceUtils.toUpperCase(property);
   }
 
-
-  // 首字母小写转化为大写
-  private String toUpperCase(String type) {
-    char[] ch = type.toCharArray();
-    if (ch[0] >= 'a' && ch[0] <= 'z' ) {
-      ch[0] -=32;
-    }
-    return String.valueOf(ch);
-  }
-
-  // key default value
-  // double
-  private String getDeFaultValue(String type,String fieldDefaultValue) {
+  /**
+   * @deprecated according type and filed default value  to get real default value
+   * @param type
+   * @param fieldDefaultValue
+   * @return default value match type
+   * */
+  private String getDefaultValue(String type,String fieldDefaultValue) {
     if (type == null) {
       throw new IllegalStateException();
     }
@@ -279,7 +275,10 @@ public class BuildPreferenceClass {
     return null;
   }
 
-  // preference 保存时的Key
+  /**
+   * @deprecated according classname and propertyName to get Preference key
+   * @return store Preference key like AccountPreference_name
+   * */
   private String getPreferenceKey(String className,String propertyName) {
     return className +"_"+ propertyName;
   }

@@ -4,13 +4,11 @@ import com.google.auto.service.AutoService;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.Filer;
 import javax.annotation.processing.Messager;
@@ -20,11 +18,11 @@ import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ElementKind;
-import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
+
 
 @AutoService(Processor.class)
 public class PreferenceProcessor extends AbstractProcessor {
@@ -62,7 +60,7 @@ public class PreferenceProcessor extends AbstractProcessor {
 
   /**
    * @return true : this annotation is received by this processor,
-   *                 other sub Processor will not receive this annotation.
+   *                other sub Processor will not receive this annotation.
    * */
   @Override
   public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -72,11 +70,8 @@ public class PreferenceProcessor extends AbstractProcessor {
 
     Set<? extends Element> preferenceFields = roundEnv.getElementsAnnotatedWith(PreferenceField.class);
     Map<Element, List<Element>> preferenceObjects = new HashMap<>(20);
-    int i = 0;
-    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor start to work！>>>>>>>>>>>>");
-    // class element为key将对应的field形成list put 到 map中
+    //select PreferenceItem and PreferenceField list put them in map
     for (final Element field : preferenceFields) {
-      messager.printMessage(Diagnostic.Kind.NOTE, "element " + i++ + " field " + field.getSimpleName());
       final Element classElement = field.getEnclosingElement();
       if (classElement.getKind() != ElementKind.CLASS) {
         sendErrorMessage(classElement, ERROR_MESSAGE, PreferenceItem.class.getSimpleName());
@@ -94,37 +89,36 @@ public class PreferenceProcessor extends AbstractProcessor {
     if (preferenceObjects.size() == 0) {
       return false;
     }
-    messager.printMessage(Diagnostic.Kind.NOTE, "preference objects "+preferenceObjects.toString());
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor start to work！>>>>>>>>>>>>");
+    messager.printMessage(Diagnostic.Kind.NOTE, " objects : "+preferenceObjects.toString());
 
     String uniquePkgName = getUniquePkgName(preferenceObjects);
     if (uniquePkgName == null) {
       messager.printMessage(Diagnostic.Kind.ERROR, "can't get unique pkg name ");
       return false;
     }
-    messager.printMessage(Diagnostic.Kind.NOTE, "pkg name " + uniquePkgName);
 
-   try {
+    try {
     // auto generate PreferenceManager class
      if (preferenceObjects == null || preferenceObjects.size() == 0) {
        return false;
      }
-     BuildPreferenceManager preferenceManager = new BuildPreferenceManager(filer,typeUtils,elementUtils,messager);
+     BuildPreferenceManager preferenceManager = new BuildPreferenceManager(filer, typeUtils,
+         elementUtils, messager);
      if (preferenceManager.isNeedPackageName()) {
        preferenceManager.setPackageName(uniquePkgName);
      }
      for (final Map.Entry<Element, List<Element>> entry: preferenceObjects.entrySet()) {
        Element classObject = entry.getKey();
        List<Element> fieldProperty = entry.getValue();
-       BuildPreferenceClass itemClass = new BuildPreferenceClass(filer, typeUtils, elementUtils, messager);
+       BuildPreferenceClass itemClass = new BuildPreferenceClass(filer, typeUtils,
+           elementUtils, messager);
        boolean success = itemClass.generateFile(classObject, fieldProperty);
        if (success) {
          preferenceManager.addStaticClass(itemClass.getPackageName(),itemClass.getDestClassName());
        }
      }
      preferenceManager.generateFile();
-
-     // preferenceManager.generateClear();
-    // preferenceManager.endFile();
     } catch (IllegalStateException e) {
       messager.printMessage(Diagnostic.Kind.ERROR, "IllegalStateException" + e.getMessage());
     } catch (IOException e) {
@@ -132,17 +126,7 @@ public class PreferenceProcessor extends AbstractProcessor {
     } catch (NullPointerException e) {
       messager.printMessage(Diagnostic.Kind.ERROR, "NullPointerException " + e.getMessage());
    }
-    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<<<< Preference Processor finished！>>>>>>>>>>>>");
-
- /*   BuildPreferenceManagerPoet poet = new BuildPreferenceManagerPoet(filer,typeUtils,elementUtils,messager);
-    poet.setPackageName(uniquePkgName);
-    try {
-      poet.generateFile();
-
-    }catch (IOException e) {
-       e.printStackTrace();
-    }
-*/
+    messager.printMessage(Diagnostic.Kind.NOTE, "<<<<<<<<< Preference Processor finished！>>>>>>>>>>");
 
     return false;
   }
@@ -151,12 +135,12 @@ public class PreferenceProcessor extends AbstractProcessor {
     messager.printMessage(Diagnostic.Kind.ERROR, String.format(msg, args), e);
   }
 
-  // 计算PreferenceManager 的包名
+  // calculate the AutoPreferenceManager package name
   private String getUniquePkgName(final Map<Element, List<Element>> elementMap) {
 
     Map<String,Integer> pkgMap = new HashMap<>();
 
-    // account pkgName appear
+    // account @PreferenceItem class package
     for (Element element : elementMap.keySet()) {
       String pkgName = elementUtils.getPackageOf(element).getQualifiedName().toString();
       Integer integer = pkgMap.get(pkgName);
@@ -168,9 +152,9 @@ public class PreferenceProcessor extends AbstractProcessor {
       pkgMap.put(pkgName, integer);
     }
 
-    // PkgName次数最多的一个做为PreferenceManager的包名
     Integer tempCount = 0;
     String pkgName = null;
+    // mostly appear use it as AutoPreferenceManager's package
     for (Map.Entry<String,Integer> entry :pkgMap.entrySet()) {
       if (entry.getValue() > tempCount) {
         tempCount = entry.getValue();

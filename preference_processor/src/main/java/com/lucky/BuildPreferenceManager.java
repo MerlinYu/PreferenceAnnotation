@@ -73,11 +73,11 @@ public class BuildPreferenceManager {
   public void generateFile(String sourceClassName) throws IllegalStateException,IOException{
     this.sourceClassname= sourceClassName;
     destClassName = sourceClassName;
-    JavaFileObject managerFile = filer.createSourceFile(destClassName);
+    JavaFileObject managerFile = filer.createSourceFile(pkgName + "." + destClassName);
 
     javaWriter = new JavaWriter(managerFile.openWriter());
     ArrayList<String> importsList = getImports(staticClassList);
-    messager.printMessage(Diagnostic.Kind.NOTE, " ====== " + importsList.toString());
+    messager.printMessage(Diagnostic.Kind.NOTE, " imports package:" + importsList.toString());
     javaWriter.emitPackage(pkgName)
         .emitImports("android.content.Context")
         .emitImports(importsList)
@@ -145,7 +145,7 @@ public class BuildPreferenceManager {
   }
 
 
-//generate static get Preference method
+  //generate static get Preference method
   public void generateStaticMethod(String className) throws IOException{
     javaWriter.beginMethod(className, getStaticMethodName(className),
         EnumSet.of(Modifier.PUBLIC,Modifier.STATIC));
@@ -195,26 +195,9 @@ public class BuildPreferenceManager {
     if (className.endsWith(CLASS_PROCESSOR)) {
       return "_" + className.replace(CLASS_PROCESSOR,"");
     }
-    return "_" + toLowerCase(className);
+    return "_" + PreferenceUtils.toLowerCase(className);
   }
 
-  // 首字母小写转化为大写
-  private String toUpperCase(String type) {
-    char[] ch = type.toCharArray();
-    if (ch[0] >= 'a' && ch[0] <= 'z' ) {
-      ch[0] -=32;
-    }
-    return String.valueOf(ch);
-  }
-
-  // 首字母大写转化为小写
-  private String toLowerCase(String type) {
-    char[] ch = type.toCharArray();
-    if (ch[0] >= 'a' && ch[0] <= 'z' ) {
-      ch[0] +=32;
-    }
-    return String.valueOf(ch);
-  }
 
 
   private ArrayList<String> getImports(Map<String,String> classList) {
