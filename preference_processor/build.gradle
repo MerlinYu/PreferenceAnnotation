@@ -7,12 +7,8 @@ dependencies {
     sourceCompatibility = 1.7
     targetCompatibility = 1.7
 
-
-
     /** java processor animation*/
     compile  "com.google.auto.service:auto-service:1.0-rc2"
     compile   "com.squareup:javawriter:2.5.1"
-    compile 'com.squareup:javapoet:1.7.0'
-
-
 }
+apply from: 'https://raw.github.com/chrisbanes/gradle-mvn-push/master/gradle-mvn-push.gradle'
