@@ -10,10 +10,6 @@ public class AnnotationApplication extends Application {
   @Override
   public void onCreate() {
     super.onCreate();
-//    PreferenceManager.
-//    AutoPreferenceManager
-    Log.v("===tag=== ", this.getPackageName());
-    PreferenceConstant.setPkgName(this.getPackageName());
 
   }
 }
