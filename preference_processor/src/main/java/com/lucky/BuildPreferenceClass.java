@@ -28,23 +28,17 @@ import javax.tools.JavaFileObject;
  * <strong>
  *   if @PreferenceItem's tableName is AccountPreferenceProcessor's table.
  *   The default value = "preference_annotation"
- *   @see {@link @PreferenceItem}
  * </strong>
  * </p>
- * <div>
+ * <p>
  *   AccountPreferenceProcessor include three method : set**(),get**(),clear();
  *   <strong>
  *     Normal Preference need a store key but this class will generate automacly a key.
- *     if you annotate like this {
- *     @PrefenceItem
- *     public AccountPreference {
- *       @PreferenceField
- *        String name;
- *       }
- *     }
+ *     if you annotate like this:<code>
+ *     </code>
  *     the auto key is AccountPreference_name;
  *   </strong>
- * </div>
+ * </p>
  *
  *
  */

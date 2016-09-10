@@ -26,12 +26,11 @@ import javax.tools.JavaFileObject;
  * <strong>
  *   AutoPreferenceManager's package  depends on the @PreferenceItem class's package.
  *   If your @PreferenceItem has different package, it will use @PreferenceItem appears the mostly.
- *   @see {@link @PreferenceProcessor}
  * </strong>
  *
- * <div>
+ * <p>
  *   AccountPreferenceManager.****.set**();
- * </div>
+ * </p>
  */
 
 public class BuildPreferenceManager {
