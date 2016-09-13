@@ -26,8 +26,8 @@ public class MainActivity extends AppCompatActivity {
       @Override
       public void onClick(View view) {
         Toast.makeText(MainActivity.this,"account set value!",Toast.LENGTH_LONG).show();
-        AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
-        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
+//        AutoPreferenceManager.LoginPreference().setId(MainActivity.this,"helloworld!");
+//        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
 
       }
     });
@@ -37,8 +37,8 @@ public class MainActivity extends AppCompatActivity {
     getBtn.setOnClickListener(new View.OnClickListener() {
       @Override
       public void onClick(View view) {
-        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
-        AutoPreferenceManager.clearAll(MainActivity.this);
+//        AutoPreferenceManager.AccountPreference().setKitty(MainActivity.this,20);
+//        AutoPreferenceManager.clearAll(MainActivity.this);
       }
     });
 
