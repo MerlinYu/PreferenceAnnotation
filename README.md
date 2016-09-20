@@ -54,6 +54,9 @@ The principle is to use Java Annotation Processor to generate code automatically
 There define two annotation type @PreferenceItem and @PreferenceField.The first type is use for preference class and 
 the second is use for property field.
 
+#mark
+There is a problem that I havn't resoloved when I push it to maven.<br>
+
 
 Copyright MerlinYu
 
