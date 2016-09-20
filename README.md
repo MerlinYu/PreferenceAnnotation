@@ -56,8 +56,9 @@ the second is use for property field.
 
 #mark
 There is a problem that I havn't resoloved when I push it to maven.<br>
+I want someone help me to relove the pushed module dependency problem. 
 
-
+#Reference
 Copyright MerlinYu
 
 Licensed under the Apache License, Version 2.0 (the "License");
